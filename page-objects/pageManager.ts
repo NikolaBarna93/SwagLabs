@@ -3,6 +3,9 @@ import { InventoryPage } from "./inventoryPage";
 import { NavigationPage } from "./navigationPage";
 import { CheckOut } from "./checkOut";
 
+/**
+ * PageManager class to manage different page objects
+ */
 export class PageManager{
     readonly page: Page
     readonly inventoryPage: InventoryPage;

@@ -1,6 +1,7 @@
 import { test, expect, } from '@playwright/test';
 import { PageManager } from '../page-objects/pageManager';
 
+/* Logging in before each test */
 test.beforeEach (async ({ page }) => {
   await page.goto('https://www.saucedemo.com/');
   await page.locator('input[name="user-name"]').fill('standard_user');
@@ -39,7 +40,7 @@ test.describe('E2E tests for buying items', () => {
     }
   });
 
-  /* success story of buying multiple items */
+  /* Success story of buying multiple items */
   test('Buy multiple items (random)', async ({ page }) => {
     const pm= new PageManager(page);
     const items = await pm.inventory().getAllItems();
@@ -68,6 +69,7 @@ test.describe('E2E tests for buying items', () => {
     await expect(page.locator('.complete-header')).toHaveText('Thank you for your order!');
   });
 
+  /* Success story of buying all items */
   test('Buy all items', async ({ page }) => {
     const pm= new PageManager(page);
     const items = await pm.inventory().getAllItems();
@@ -142,6 +144,7 @@ test.describe('invalid checkout information', () => {
   });
 });
 
+/** Testing each possible ordering of items */
 test.describe('Inventory item ordering', () => {
   /* Test ordering items A to Z */
   test('Order items A to Z', async ({ page }) => {
@@ -210,7 +213,9 @@ test.describe('Inventory item ordering', () => {
   });
 });
 
+/** Checking functionality of reset app state */
 test.describe('Reset app state', () => {
+  /** Confirming cart badge is removed after app reset */
   test('Reset cart item count', async ({ page }) => {
     const pm= new PageManager(page);
     await pm.inventory().addToCartItems(2);
@@ -220,7 +225,7 @@ test.describe('Reset app state', () => {
     await page.locator('#reset_sidebar_link').click();
     await expect(cartBadge).not.toBeAttached();
   });
-
+  /** Confirming remove button is replaced with add to cart after app reset */
   test('Reset inventory buttons', async ({ page }) => {
     const pm= new PageManager(page);
     await pm.inventory().addToCartItems(2);
@@ -233,7 +238,7 @@ test.describe('Reset app state', () => {
     buttonCount = await inventoryButtons.count();
     await expect(buttonCount).toBe(0);
   })
-
+  /**Confirming cart page has no items after app reset */
   test('Reset from cart page', async ({ page }) => {
     const pm= new PageManager(page);
     await pm.inventory().addToCartItems(1);
@@ -243,5 +248,52 @@ test.describe('Reset app state', () => {
     await page.locator('#react-burger-menu-btn').click();
     await page.locator('#reset_sidebar_link').click();
     await expect(cartItems).toHaveCount(0);
+  });
+});
+
+/** Removing items from cart */
+test.describe('Remove from cart', () => {
+  /** Remove one item from the cart with one item */
+  test('Remove single item from cart', async ({ page }) => {
+    const pm= new PageManager(page);
+    await pm.inventory().addToCartItems(1);
+    await pm.navigateTo().cartPage();
+    let cartItems = page.locator('.cart_item');
+    await expect(cartItems).toHaveCount(1);
+    await cartItems.nth(0).locator('button').click();
+    cartItems = page.locator('.cart_item');
+    await expect(cartItems).toHaveCount(0);
+  });
+  /** Remove items from the cart trough main page */
+  test('Remove multiple items from main page', async ({ page }) => {
+    const pm= new PageManager(page);
+    await pm.inventory().addToCartItems(3);
+    let inventoryButtons = page.locator('.btn_secondary');
+    let buttonCount = await inventoryButtons.count();
+    await expect(buttonCount).toBe(3); // Assuming there are 6 items total, 3 added to cart
+    for (let i=0; i<3; i++){
+      await inventoryButtons.nth(0).click(); // Always remove the first button in the list
+    }
+    inventoryButtons = page.locator('.btn_secondary');
+    buttonCount = await inventoryButtons.count();
+    await expect(buttonCount).toBe(0);
+    const cartBadge = page.locator('.shopping_cart_badge');
+    await expect(cartBadge).not.toBeAttached();
+    await pm.navigateTo().cartPage();
+    const cartItems = page.locator('.cart_item');
+    await expect(cartItems).toHaveCount(0);
+  })
+  /** Remove one item from cart with multiple items */
+  test('Remove one item from cart with multiple items', async ({ page }) => {
+    const pm= new PageManager(page);
+    await pm.inventory().addToCartItems(4);
+    await pm.navigateTo().cartPage();
+    let cartItems = page.locator('.cart_item');
+    await expect(cartItems).toHaveCount(4);
+    await cartItems.nth(1).locator('button').click(); // Remove second item
+    cartItems = page.locator('.cart_item');
+    await expect(cartItems).toHaveCount(3);
+    const cartBadge = page.locator('.shopping_cart_badge');
+    await expect(cartBadge).toHaveText('3');
   });
 });
