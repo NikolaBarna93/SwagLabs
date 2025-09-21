@@ -1,27 +1,75 @@
 name: Playwright Tests
+
+# Controls when the action will run.
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
+# Allows you to run this workflow manually from the Actions tab
+workflow_dispatch:
+
+# The jobs that this workflow will execute
 jobs:
   test:
-    timeout-minutes: 60
+    # The OS to run on (Ubuntu is the most common)
     runs-on: ubuntu-latest
+
+    # Strategy matrix allows running tests in multiple environments (e.g., different browsers)
+    strategy:
+      matrix:
+        # We define one dimension: the browser to test on.
+        # This will create 3 jobs: one for each browser.
+        browser: [chromium, firefox, webkit]
+      # Let the other browsers continue if one fails
+      fail-fast: false
+
+    # The steps for the job
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+      # Step 1: Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js (Playwright requires it)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*' # Use the latest LTS version
+          cache: 'npm'
+
+      # Step 3: Install dependencies (this will cache them for speed)
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 4: Install Playwright Browsers
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+        # '--with-deps' is crucial for Linux systems to install browser dependencies
+
+      # Step 5: Run your Playwright tests
+      - name: Run Playwright tests
+        run: npx playwright test --project=${{ matrix.browser }} --reporter=list
+        # This runs tests only for the current browser in the matrix
+        # e.g., for the 'chromium' job, it runs `--project=chromium`
+        env:
+          # If your tests need a base URL, you can set it here.
+          # For the SauceDemo site, you don't need it as you use the full URL.
+          # BASE_URL: http://localhost:3000
+
+      # Step 6: ONLY IF THE TESTS FAILED: Upload Playwright artifacts (report, traces, videos)
+      - name: Upload Playwright report
+        if: failure() # This step only runs if a previous step failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: playwright-report/
+          retention-days: 7 # Artifacts are automatically deleted after 7 days
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.browser }}
+          path: test-results/
+          retention-days: 7
