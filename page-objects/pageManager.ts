@@ -1,5 +1,5 @@
 import { Page } from "@playwright/test";
-import { InventoryPage } from "./InventoryPage";
+import { InventoryPage } from "./inventoryPage";
 import { NavigationPage } from "./navigationPage";
 import { CheckOut } from "./checkOut";
 
