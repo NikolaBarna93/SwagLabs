@@ -49,12 +49,6 @@ jobs:
       # Step 5: Run your Playwright tests
       - name: Run Playwright tests
         run: npx playwright test --project=${{ matrix.browser }} --reporter=list
-        # This runs tests only for the current browser in the matrix
-        # e.g., for the 'chromium' job, it runs `--project=chromium`
-        env:
-          # If your tests need a base URL, you can set it here.
-          # For the SauceDemo site, you don't need it as you use the full URL.
-          # BASE_URL: http://localhost:3000
 
       # Step 6: ONLY IF THE TESTS FAILED: Upload Playwright artifacts (report, traces, videos)
       - name: Upload Playwright report
