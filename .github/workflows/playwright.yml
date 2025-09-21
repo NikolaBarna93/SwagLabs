@@ -1,68 +1,25 @@
 name: Playwright Tests
+on: [push, workflow_dispatch]
 
-# Controls when the action will run.
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# The jobs that this workflow will execute
 jobs:
   test:
-    # The OS to run on (Ubuntu is the most common)
+    timeout-minutes: 10
     runs-on: ubuntu-latest
 
-    # Strategy matrix allows running tests in multiple environments (e.g., different browsers)
-    strategy:
-      matrix:
-        # We define one dimension: the browser to test on.
-        # This will create 3 jobs: one for each browser.
-        browser: [chromium, firefox, webkit]
-      # Let the other browsers continue if one fails
-      fail-fast: false
-
-    # The steps for the job
     steps:
-      # Step 1: Checkout the code from the repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js (Playwright requires it)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*' # Use the latest LTS version
+          node-version: 'lts/*'
           cache: 'npm'
 
-      # Step 3: Install dependencies (this will cache them for speed)
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps
 
-      # Step 4: Install Playwright Browsers
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps ${{ matrix.browser }}
-        # '--with-deps' is crucial for Linux systems to install browser dependencies
-
-      # Step 5: Run your Playwright tests
       - name: Run Playwright tests
-        run: npx playwright test --project=${{ matrix.browser }} --reporter=list
-
-      # Step 6: ONLY IF THE TESTS FAILED: Upload Playwright artifacts (report, traces, videos)
-      - name: Upload Playwright report
-        if: failure() # This step only runs if a previous step failed
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.browser }}
-          path: playwright-report/
-          retention-days: 7 # Artifacts are automatically deleted after 7 days
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.browser }}
-          path: test-results/
-          retention-days: 7
+        run: npx playwright test
